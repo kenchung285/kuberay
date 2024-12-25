@@ -4,6 +4,7 @@ on:
   push:
     branches:
     - master
+    - githubci-personal-testing
   pull_request:
     branches: [ master ]
 
