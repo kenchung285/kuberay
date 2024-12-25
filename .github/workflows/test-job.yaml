@@ -98,10 +98,10 @@ jobs:
 
       - name: Push Apiserver to Quay.io
         run: |
-          docker image tag kuberay/apiserver:${{ steps.vars.outputs.sha_short }} quay.io/kuberay/apiserver:${{ steps.vars.outputs.sha_short }};
-          docker push quay.io/kuberay/apiserver:${{ steps.vars.outputs.sha_short }};
-          docker image tag kuberay/apiserver:${{ steps.vars.outputs.sha_short }} quay.io/kuberay/apiserver:nightly;
-          docker push quay.io/kuberay/apiserver:nightly
+          docker image tag kuberay/apiserver:${{ steps.vars.outputs.sha_short }} quay.io/kenchung285/kuberay-apiserver:${{ steps.vars.outputs.sha_short }};
+          docker push quay.io/kenchung285/kuberay-apiserver:${{ steps.vars.outputs.sha_short }};
+          docker image tag kuberay/apiserver:${{ steps.vars.outputs.sha_short }} quay.io/kenchung285/kuberay-apiserver:nightly;
+          docker push quay.io/kenchung285/kuberay-apiserver:nightly
         if: contains(fromJson('["refs/heads/master"]'), github.ref)
 
   build_security_proxy:
@@ -172,10 +172,10 @@ jobs:
 
       - name: Push security proxy to Quay.io
         run: |
-          docker image tag kuberay/security-proxy:${{ steps.vars.outputs.sha_short }} quay.io/kuberay/security-proxy:${{ steps.vars.outputs.sha_short }};
-          docker push quay.io/kuberay/security-proxy:${{ steps.vars.outputs.sha_short }};
-          docker image tag kuberay/security-proxy:${{ steps.vars.outputs.sha_short }} quay.io/kuberay/security-proxy:nightly;
-          docker push quay.io/kuberay/security-proxy:nightly
+          docker image tag kuberay/security-proxy:${{ steps.vars.outputs.sha_short }} quay.io/kenchung285/kuberay-security-proxy:${{ steps.vars.outputs.sha_short }};
+          docker push quay.io/kenchung285/kuberay-security-proxy:${{ steps.vars.outputs.sha_short }};
+          docker image tag kuberay/security-proxy:${{ steps.vars.outputs.sha_short }} quay.io/kenchung285/kuberay-security-proxy:nightly;
+          docker push quay.io/kenchung285/kuberay-security-proxy:nightly
         if: contains(fromJson('["refs/heads/master"]'), github.ref)
 
   build_operator:
