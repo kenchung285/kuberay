@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 
 	"github.com/ray-project/kuberay/ray-operator/pkg/features"
+	"github.com/ray-project/kuberay/ray-operator/test/support"
 
 	"github.com/ray-project/kuberay/ray-operator/controllers/ray/common"
 	"github.com/ray-project/kuberay/ray-operator/controllers/ray/utils"
@@ -59,7 +60,7 @@ func rayClusterTemplate(name string, namespace string) *rayv1.RayCluster {
 						Containers: []corev1.Container{
 							{
 								Name:  "ray-head",
-								Image: "rayproject/ray:2.9.0",
+								Image: support.GetRayImage(),
 							},
 						},
 					},
@@ -77,7 +78,7 @@ func rayClusterTemplate(name string, namespace string) *rayv1.RayCluster {
 							Containers: []corev1.Container{
 								{
 									Name:  "ray-worker",
-									Image: "rayproject/ray:2.9.0",
+									Image: support.GetRayImage(),
 								},
 							},
 						},
@@ -535,7 +536,7 @@ var _ = Context("Inside the default namespace", func() {
 		return "", nil
 	}
 
-	testSuspendRayCluster := func(withConditionEnabled bool) {
+	testSuspendRayCluster := func(withConditionDisabled bool) {
 		ctx := context.Background()
 		namespace := "default"
 		rayCluster := rayClusterTemplate("raycluster-suspend", namespace)
@@ -547,8 +548,8 @@ var _ = Context("Inside the default namespace", func() {
 		allFilters := common.RayClusterAllPodsAssociationOptions(rayCluster).ToListOptions()
 
 		BeforeAll(func() {
-			if withConditionEnabled {
-				cleanUpFunc := features.SetFeatureGateDuringTest(GinkgoTB(), features.RayClusterStatusConditions, true)
+			if withConditionDisabled {
+				cleanUpFunc := features.SetFeatureGateDuringTest(GinkgoTB(), features.RayClusterStatusConditions, false)
 				DeferCleanup(cleanUpFunc)
 			}
 		})
@@ -600,7 +601,7 @@ var _ = Context("Inside the default namespace", func() {
 			Eventually(
 				getClusterState(ctx, namespace, rayCluster.Name),
 				time.Second*3, time.Millisecond*500).Should(Equal(rayv1.Suspended))
-			if withConditionEnabled {
+			if !withConditionDisabled {
 				Eventually(findRayClusterSuspendStatus, time.Second*3, time.Millisecond*500).
 					WithArguments(ctx, rayCluster).Should(Equal(rayv1.RayClusterSuspended))
 				Expect(meta.IsStatusConditionTrue(rayCluster.Status.Conditions, string(rayv1.RayClusterProvisioned))).To(BeFalse())
@@ -650,7 +651,7 @@ var _ = Context("Inside the default namespace", func() {
 				getClusterState(ctx, namespace, rayCluster.Name),
 				time.Second*3, time.Millisecond*500).Should(Equal(rayv1.Suspended))
 
-			if withConditionEnabled {
+			if !withConditionDisabled {
 				Eventually(findRayClusterSuspendStatus, time.Second*3, time.Millisecond*500).
 					WithArguments(ctx, rayCluster).Should(Equal(rayv1.RayClusterSuspended))
 			}
@@ -686,7 +687,7 @@ var _ = Context("Inside the default namespace", func() {
 			Eventually(
 				getClusterState(ctx, namespace, rayCluster.Name),
 				time.Second*3, time.Millisecond*500).Should(Equal(rayv1.Ready))
-			if withConditionEnabled {
+			if !withConditionDisabled {
 				Eventually(findRayClusterSuspendStatus, time.Second*3, time.Millisecond*500).
 					WithArguments(ctx, rayCluster).Should(BeEmpty())
 				Expect(meta.IsStatusConditionTrue(rayCluster.Status.Conditions, string(rayv1.RayClusterProvisioned))).To(BeTrue())
@@ -703,11 +704,11 @@ var _ = Context("Inside the default namespace", func() {
 	}
 
 	Describe("Suspend RayCluster", Ordered, func() {
-		testSuspendRayCluster(false)
+		testSuspendRayCluster(true)
 	})
 
 	Describe("Suspend RayCluster with Condition", Ordered, func() {
-		testSuspendRayCluster(true)
+		testSuspendRayCluster(false)
 	})
 
 	Describe("Suspend RayCluster atomically with Condition", Ordered, func() {
@@ -719,8 +720,7 @@ var _ = Context("Inside the default namespace", func() {
 		numPods := 4 // 1 Head + 3 Workers
 
 		BeforeAll(func() {
-			cleanUpFunc := features.SetFeatureGateDuringTest(GinkgoTB(), features.RayClusterStatusConditions, true)
-			DeferCleanup(cleanUpFunc)
+			Expect(features.Enabled(features.RayClusterStatusConditions)).To(BeTrue())
 		})
 
 		It("Create a RayCluster custom resource", func() {
@@ -1063,8 +1063,7 @@ var _ = Context("Inside the default namespace", func() {
 
 	Describe("RayCluster with RayClusterStatusConditions feature gate enabled", func() {
 		BeforeEach(func() {
-			cleanUpFunc := features.SetFeatureGateDuringTest(GinkgoTB(), features.RayClusterStatusConditions, true)
-			DeferCleanup(cleanUpFunc)
+			Expect(features.Enabled(features.RayClusterStatusConditions)).To(BeTrue())
 		})
 
 		It("Should handle HeadPodReady and RayClusterProvisioned conditions correctly", func(ctx SpecContext) {
