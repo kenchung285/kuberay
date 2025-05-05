@@ -25,6 +25,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -84,6 +86,10 @@ var _ = BeforeSuite(func(ctx SpecContext) {
 	Expect(err).ToNot(HaveOccurred())
 	Expect(cfg).ToNot(BeNil())
 
+	kubeconfigPath := "/tmp/envtest.kubeconfig"
+	err = dumpKubeconfig(cfg, kubeconfigPath)
+	Expect(err).ToNot(HaveOccurred())
+
 	err = rayv1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -141,4 +147,28 @@ var _ = AfterSuite(func() {
 	// NOTE(simon): the error is ignored because it gets raised in macOS due
 	// to a harmless timeout error.
 	_ = testEnv.Stop()
+
+	kubeconfigPath := "/tmp/envtest.kubeconfig"
+	err := os.Remove(kubeconfigPath)
+	Expect(err).NotTo(HaveOccurred(), "failed to remove kubeconfig")
 })
+
+func dumpKubeconfig(cfg *rest.Config, path string) error {
+	kubeconfig := clientcmdapi.NewConfig()
+
+	kubeconfig.Clusters["envtest"] = &clientcmdapi.Cluster{
+		Server:                   cfg.Host,
+		CertificateAuthorityData: cfg.CAData,
+	}
+	kubeconfig.AuthInfos["envtest-user"] = &clientcmdapi.AuthInfo{
+		ClientCertificateData: cfg.CertData,
+		ClientKeyData:         cfg.KeyData,
+	}
+	kubeconfig.Contexts["envtest-context"] = &clientcmdapi.Context{
+		Cluster:  "envtest",
+		AuthInfo: "envtest-user",
+	}
+	kubeconfig.CurrentContext = "envtest-context"
+
+	return clientcmd.WriteToFile(*kubeconfig, path)
+}
